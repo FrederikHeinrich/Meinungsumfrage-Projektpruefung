@@ -1,21 +1,31 @@
 const mongoose = require("mongoose");
 const shortId = require("shortid");
 
-const EinladungSchema = new mongoose.Schema({
-  Email: {
+const InviteSchema = new mongoose.Schema({
+  surveyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'survey',
+    required: true,
+  },
+  email: {
     type: String,
     required: true,
   },
-  Token: {
+  token: {
     type: String,
     required: true,
     default: shortId.generate,
   },
-  Ablaufdatum: {
+  expiryDate: {
     type: Date,
     required: true,
     default: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000),
   },
+  valid: {
+    type: Boolean,
+    required: true,
+    default: true,
+  }
 });
 
 /**
@@ -25,4 +35,4 @@ const EinladungSchema = new mongoose.Schema({
  *
  */
 
-module.exports = mongoose.model("Einladung", EinladungSchema);
+module.exports = mongoose.model("Invite", InviteSchema);

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include("../../partials/head.ejs") %>
+    <title>Admin</title>
+</head>
+
+<body>
+    <header>
+        <%- include("../../partials/header.ejs") %>
+    </header>
+    <div class="container">
+        <h1>Umfragen</h1>
+
+        <form action="/admin/survey/create" method="POST" class="my-4 form-inline">
+            <label for="name" class="sr-only">Name</label>
+            <input required placeholder="Name" type="text" name="name" id="name" class="form-control col mr-2" />
+            <label for="description" class="sr-only">Beschreibung</label>
+            <input required placeholder="Beschreibung" type="text" name="description" id="description"
+                class="form-control col mr-2" />
+            <button class="btn btn-success" type="submit">Erstellen</button>
+        </form>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Beschreibung</th>
+                    <th>Infos</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% surveys.forEach(survey => { %>
+                <tr>
+                    <td>
+                        <a><%= survey.name %></a>
+                    </td>
+                    <td>
+                        <a><%= survey.description %></a>
+                    </td>
+                    <td><a href="./survey/<%= survey._id %>">Klick hier für mehr Infos</a></td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+
+    </div>
+
+    <footer>
+        <%- include("../../partials/footer.ejs") %>
+    </footer>
+</body>
+
+</html>

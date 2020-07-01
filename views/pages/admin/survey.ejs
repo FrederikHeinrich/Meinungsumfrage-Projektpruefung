@@ -1,0 +1,92 @@
+<%= survey %>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include("../../partials/head.ejs") %>
+    <title>Umfrage - <%= survey.name %></title>
+</head>
+
+<body>
+    <header>
+        <%- include("../../partials/header.ejs") %>
+    </header>
+    <div class="container">
+        <h1><%= survey.name %></h1>
+        <h3><%= survey.description %></h3>
+        <h4>Einladen</h4>
+        <form action="" method="POST" class="my-4 form-inline">
+            <label for="text" class="sr-only">Text</label>
+            <input required placeholder="MaxMusterman@Muster.de" type="email" name="email" id="email"
+                class="form-control col mr-2" />
+            <button class="btn btn-success" type="submit" name="action" value="invite">Einladen</button>
+        </form>
+        <h4>Felder</h4>
+        <form action="" method="POST" class="my-4 form-inline">
+            <label for="text" class="sr-only">Text</label>
+            <input required placeholder="Text" type="text" name="text" id="text" class="form-control col mr-2" />
+            <button class="btn btn-success" type="submit" name="action" value="create">Hinzufügen</button>
+        </form>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Text</th>
+                    <th>Happy</th>
+                    <th>Okay</th>
+                    <th>Sad</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <% survey.fields.forEach(field => { %>
+                <tr>
+                    <td>
+                        <a><%= field.text %></a>
+                    </td>
+                    <td>
+                        <a><%= field.happy %></a>
+                    </td>
+                    <td>
+                        <a><%= field.okay %></a>
+                    </td>
+                    <td>
+                        <a><%= field.sad %></a>
+                    </td>
+                    <td>
+                        <form action="" method="POST">
+                            <input hidden name="fieldId" value="<%= field._id %>">
+                            <button type="submit" name="action" value="delete" <% if (survey.entries > 0) { %> disabled
+                                <% } %>>löschen</button>
+                        </form>
+                    </td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Anmerkungen</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% survey.comments.forEach(comment => { %>
+                <tr>
+                    <td>
+                        <a><%= comment %></a>
+                    </td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+
+        <a href="../surveys">Zu den Umfragen</a>
+    </div>
+
+    <footer>
+        <%- include("../../partials/footer.ejs") %>
+    </footer>
+</body>
+
+</html>

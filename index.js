@@ -2,99 +2,200 @@
 var createError = require("http-errors");
 var express = require("express");
 var path = require("path");
-var cookieParser = require("cookie-parser");
 var morgan = require("morgan");
-var session = require("express-session");
+var basicAuth = require("express-basic-auth");
 
 const nodemailer = require("nodemailer");
 
-//----------------------------------------------
-var app = express();
+var mongoose = require("mongoose");
 
 var config = require("./config");
+//----------------------------------------------
+
+var app = express();
+app.use(morgan("dev"));
+app.set("view engine", "ejs");
+app.use(express.urlencoded({ extended: false }));
+
+var Invites = require("./models/Invite");
+var Surveys = require('./models/Survey');
 
 //----------------------------------------------
-// Database
 
-var Einladungen = require("./models/Einladung");
-
-// ------
-var mongoose = require("mongoose");
-mongoose.connect("mongodb://localhost/Meinungsumfragen", {
+mongoose.connect("mongodb://localhost/Surveys", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
 var db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
 db.once("open", async function () {
-  console.log("mongodb Connected!");
-  // Einladungen.create({ Email: "test@test.test" });
+  console.log("Database Connected!");
 });
 
 //----------------------------------------------
+
 var emailer = nodemailer.createTransport({
-  host: config.EMailHost,
-  port: config.EMailPort,
-  secure: config.EMailSecure,
+  host: config.EMail_Host,
+  port: config.EMail_Port,
+  secure: config.EMail_Secure,
   auth: {
-    user: config.EMailUser,
-    pass: config.EMailPass,
+    user: config.EMail_User,
+    pass: config.EMail_Password,
   },
 });
+
 //----------------------------------------------
 
-app.use(morgan("dev"));
 
-app.set("view engine", "ejs");
 
-var { ESRCH } = require("constants");
+//----------------------------------------------
 
-app.route("/").get(async function (req, res) {
-  res.render("pages/index");
+
+app.route("/")
+  .get(async function (req, res) {
+    res.render("pages/index");
+  })
+  .post(async function (req, res) {
+    var survey = await Surveys.findOne({ _id: req.body.surveyId });
+    var invite = await Invites.findOne({ _id: req.body.inviteId });
+    if (invite == null) {
+      res.render('pages/error', { error: "Diese Einladung gibt es nicht!", description: "Du hast die schon Beantwortet oder die wurde vom Admin gelöscht." });
+    } else {
+      survey.fields.forEach(field => {
+        var fieldValue = req.body[field._id];
+        switch (fieldValue) {
+          case "happy":
+            field.happy++;
+            break;
+          case "okay":
+            field.okay++;
+            break;
+          case "sad":
+            field.sad++;
+            break;
+        }
+      });
+
+      if (req.body.comment != null && req.body.comment != "") {
+        survey.comments.push(req.body.comment);
+      }
+      await invite.remove();
+      await survey.save();
+
+      res.redirect("/");
+    }
+  });
+
+var admin = express.Router();
+
+admin.use(basicAuth({
+  users: { admin: config.Admin_Password },
+  challenge: true,
+}));
+
+admin.get('/', async function (req, res) {
+  res.render("pages/admin/index");
 });
 
+admin.post('/', async function (req, res) {
+  res.send("ok");
+});
+
+admin.get('/surveys', async function (req, res) {
+  var surveys = await Surveys.find({});
+  res.render("pages/admin/surveys", { surveys });
+});
+
+admin.post('/survey/create', async function (req, res) {
+  var name = req.body.name;
+  var description = req.body.description;
+  var survey = await Surveys.create({ name: name, description: description });
+  res.redirect(survey._id);
+});
+
+admin.get('/survey/:surveyId', async function (req, res) {
+  var surveyId = req.params.surveyId;
+  var survey = await Surveys.findOne({ _id: surveyId });
+  res.render("pages/admin/survey", { survey });
+});
+
+admin.post('/survey/:surveyId', async function (req, res) {
+  var action = req.body.action;
+  switch (action) {
+    case "create":
+      var surveyId = req.params.surveyId;
+      var fieldText = req.body.text;
+      var survey = await Surveys.findOne({ _id: surveyId });
+      survey.fields.push({ text: fieldText });
+      await survey.save();
+      res.redirect(`/admin/survey/${surveyId}`);
+      break;
+    case "delete":
+      var surveyId = req.params.surveyId;
+      var fieldId = req.body.fieldId;
+      var survey = await Surveys.findOne({ _id: surveyId });
+      var fields = survey.fields;
+      var i = 0;
+      fields.forEach(field => {
+        if (field._id == fieldId) {
+          fields.splice(i, 1);
+        } else {
+          i++
+        }
+      });
+      await survey.save();
+      res.redirect(`/admin/survey/${surveyId}/`);
+      break;
+    case "invite":
+      var surveyId = req.params.surveyId;
+      var email = req.body.email;
+      var survey = await Surveys.findOne({ _id: surveyId });
+
+      var invite = await Invites.create({ surveyId: survey._id, email: email });
+      // send E-mail
+      let info = await emailer.sendMail({
+        from: config.EMail_Sender,
+        to: email,
+        subject: config.EMail_Title,
+        html:
+          `<a href="${config.Web_Domain}/${invite.surveyId}/${invite._id}/${invite.token}">Hier Klicken!</a>`,
+      });
+      res.redirect(`/admin/survey/${surveyId}`);
+      break;
+  }
+});
+
+app.use('/admin', admin);
+
 app
-  .route("/:token/:objectid")
-  .get(async function (req, res) {
+  .get("/:surveyId/:inviteId/:token", async function (req, res) {
+    var surveyId = req.params.surveyId;
+    var inviteId = req.params.inviteId;
     var token = req.params.token;
-    var objectid = req.params.objectid;
-    var einladung = await Einladungen.findOne({
-      Token: token,
-      _id: req.params.objectid,
+    var survey = await Surveys.findOne({
+      _id: surveyId,
     });
-    if (einladung == null) {
+    var invite = await Invites.findOne({
+      surveyId: surveyId,
+      token: token,
+      _id: req.params.inviteId,
+    });
+    if (invite == null) {
       res.render("pages/error", {
         error: "Keine Einladung gefunden!",
         description: "Die Einladung ist Abgelaufen oder Nicht mehr Gültig!",
       });
     } else {
-      res.render("pages/umfrage", { token, objectid });
+      //check if not valid or expired
+      if (!invite.valid) {
+        res.render("pages/error", { error: "Die Einladung ist Ungültig", description: "Scheinbar wurde die Einladung deaktiviert/gesperrt!" })
+      } else if (invite.expiryDate.getTime() < new Date().getTime()) {
+        res.render("pages/error", { error: "Die Einladung ist Abgelaufen", description: "Du hattest 7 Tage zeit an der Umfrage Teilzunehmen... Leider ist es jetzt zuspät!" });
+      } else {
+        res.render("pages/survey", { invite, survey });
+      }
     }
   })
-  .post(async function (req, res) {
-    res.send("ok");
-  });
-
-app
-  .route("/admin")
-  .get(async function (req, res) {
-    res.render("pages/admin");
-  })
-  .post(async function (req, res) {
-    res.send("ok");
-  });
-
-app.get("/test", async function (req, res) {
-  let info = await emailer.sendMail({
-    from: '"Fred Foo 👻" <foo@example.com>', // sender address
-    to: "mail@frederikheinrich.de", // list of receivers (e-mail, e-mail, e-mail)
-    subject: "Umfrage", // Subject line
-    text: "Hey... Deine Umfrage ist bereit!", // plain text body
-    html:
-      "<b>Hello world?</b><br><a href='https://google.de' target='#'>Click hier!</a>", // html body
-  });
-  res.send("Oki!");
-});
 
 app.listen(80, async function () {
   console.log("Server ist Online!");
