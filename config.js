@@ -13,5 +13,5 @@ module.exports = {
   Admin_Password: process.env.Admin_Password,
 
   Web_Domain: process.env.Web_Domain,
-
+  Web_Port: process.env.Web_Port,
 };

@@ -208,6 +208,6 @@ app.get("/:surveyId/:inviteId/", async function (req, res) {
   }
 });
 
-app.listen(80, async function () {
+app.listen(config.Web_Port, async function () {
   console.log("Server ist Online!");
 });
