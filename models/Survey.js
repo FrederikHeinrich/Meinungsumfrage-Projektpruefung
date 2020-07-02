@@ -13,17 +13,17 @@ var SurveyFields = new mongoose.Schema({
   happy: {
     type: Number,
     required: true,
-    default: 0
+    default: 0,
   },
   okay: {
     type: Number,
     required: true,
-    default: 0
+    default: 0,
   },
   sad: {
     type: Number,
     required: true,
-    default: 0
+    default: 0,
   },
 });
 
@@ -37,16 +37,21 @@ const SurveySchema = new mongoose.Schema({
     required: true,
   },
   fields: {
-    type: [SurveyFields]
+    type: [SurveyFields],
   },
   comments: {
-    type: [String]
+    type: [String],
   },
   entries: {
     type: Number,
     required: true,
-    default: 0
-  }
+    default: 0,
+  },
+  createDate: {
+    type: Date,
+    require: true,
+    default: new Date(),
+  },
 });
 
 module.exports = mongoose.model("Survey", SurveySchema);

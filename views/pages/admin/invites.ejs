@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include("../../partials/head.ejs") %>
+    <title>Umfrage - <%= survey.name %> - Einladungen</title>
+  </head>
+
+  <body>
+    <header>
+      <%- include("../../partials/header.ejs") %>
+    </header>
+    <div class="container">
+      <h1><%= survey.name %></h1>
+      <h3><%= survey.description %></h3>
+      <h4>Einladungen</h4>
+      <form
+        action="/admin/survey/<%= survey._id  %> "
+        method="POST"
+        class="my-4 form-inline"
+      >
+        <label for="text" class="sr-only">Text</label>
+        <input
+          required
+          placeholder="MaxMusterman@Muster.de"
+          type="email"
+          name="email"
+          id="email"
+          class="form-control col mr-2"
+        />
+        <button
+          class="btn btn-success"
+          type="submit"
+          name="action"
+          value="invite"
+        >
+          Einladen
+        </button>
+      </form>
+      <br />
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>E-Mail</th>
+            <th>Ablaufdatum</th>
+            <th>Gültig</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% invites.forEach(invite => { %>
+          <tr>
+            <td>
+              <a><%= invite.email %></a>
+            </td>
+            <td>
+              <a><%= invite.expiryDate %></a>
+            </td>
+            <td>
+                <form action="" method="post"></form>
+              <a><%= invite.valid %></a>
+            </td>
+            <td>
+              <form action="" method="POST">
+                <input hidden name="inviteId" value="<%= invite._id %>" />
+                <button type="submit" name="action" value="delete">
+                  löschen
+                </button>
+              </form>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <a href="/admin/survey/<%= survey._id %> ">Zurück</a>
+    </div>
+
+    <footer>
+      <%- include("../../partials/footer.ejs") %>
+    </footer>
+  </body>
+</html>

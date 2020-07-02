@@ -1,20 +1,14 @@
 const mongoose = require("mongoose");
-const shortId = require("shortid");
 
 const InviteSchema = new mongoose.Schema({
   surveyId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'survey',
+    ref: "survey",
     required: true,
   },
   email: {
     type: String,
     required: true,
-  },
-  token: {
-    type: String,
-    required: true,
-    default: shortId.generate,
   },
   expiryDate: {
     type: Date,
@@ -25,7 +19,12 @@ const InviteSchema = new mongoose.Schema({
     type: Boolean,
     required: true,
     default: true,
-  }
+  },
+  createDate: {
+    type: Date,
+    require: true,
+    default: new Date(),
+  },
 });
 
 /**
