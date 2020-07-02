@@ -136,7 +136,7 @@ admin.use(
 // Show Admin Startpage
 admin.get("/", async function (req, res) {
   var surveys = await Surveys.find({});
-  res.render("pages/admin/surveys", { surveys });
+  res.render("pages/admin/index");
 });
 
 // Show Survays
