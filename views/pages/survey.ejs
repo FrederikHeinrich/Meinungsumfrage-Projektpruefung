@@ -2,10 +2,11 @@
 <html lang="en">
   <head>
     <%- include("../partials/head.ejs") %>
-    <title>Admin</title>
+    <title><%= survey.name %></title>
   </head>
   <div class="container">
-    <h1>Umfrage</h1>
+    <h1><%= survey.name %></h1>
+    <h4><%= survey.description %></h4>
     <style>
       [type="radio"] {
         position: absolute;
