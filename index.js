@@ -46,51 +46,86 @@ var emailer = nodemailer.createTransport({
 
 //----------------------------------------------
 
+async function validateInvite(surveyId, inviteId, error, description) {
+  //check if not valid or expired
+  try {
+    var invite = await Invites.findOne({
+      _id: inviteId,
+      surveyId: surveyId,
+    }); // Get used Invite
+  } catch (er) {
+    return { is: false, error: er, description: "Ein Fehler ist aufgetreten!" };
+  }
+  if (invite == null)
+    return {
+      is: false,
+      error: "Einladung nicht gefunden",
+      description: "Ein Fehler ist aufgetreten!",
+    };
+  if (!invite.valid)
+    return {
+      is: false,
+      error: "Einladung wurde deaktiviert!",
+      description: "Ein Fehler ist aufgetreten!",
+    };
+  if (invite.expiryDate.getTime() < new Date().getTime())
+    return {
+      is: false,
+      error: "Einladung ist abgelaufen!",
+      description: "Ein Fehler ist aufgetreten!",
+    };
+
+  return { is: true };
+}
+
 //----------------------------------------------
+//User Router
+app.get("/", async function (req, res) {
+  res.render("pages/index");
+});
 
-app
-  .route("/")
-  .get(async function (req, res) {
-    res.render("pages/index");
-  })
-  .post(async function (req, res) {
-    var survey = await Surveys.findOne({ _id: req.body.surveyId });
-    var invite = await Invites.findOne({ _id: req.body.inviteId });
-    if (invite == null) {
-      res.render("pages/error", {
-        error: "Diese Einladung gibt es nicht!",
-        description:
-          "Du hast die schon Beantwortet oder die wurde vom Admin gelöscht.",
-      });
-    } else {
-      survey.entries++;
-      survey.fields.forEach((field) => {
-        var fieldValue = req.body[field._id];
-        switch (fieldValue) {
-          case "happy":
-            field.happy++;
-            break;
-          case "okay":
-            field.okay++;
-            break;
-          case "sad":
-            field.sad++;
-            break;
-        }
-      });
+// Manage User Answers
+app.post("/", async function (req, res) {
+  var survey = await Surveys.findOne({ _id: req.body.surveyId }); // Get filled Survay
+  var invite = await Invites.findOne({ _id: req.body.inviteId }); // Get used Invite
 
-      if (req.body.comment != null && req.body.comment != "") {
-        survey.comments.push(req.body.comment);
+  var valid = await validateInvite(surveyId, inviteId); //Test if Invite is Valid
+  if (!valid.is) {
+    res.render("pages/error", {
+      error: valid.error,
+      description: valid.description,
+    });
+  } else {
+    survey.entries++;
+    survey.fields.forEach((field) => {
+      var fieldValue = req.body[field._id];
+      switch (fieldValue) {
+        case "happy":
+          field.happy++;
+          break;
+        case "okay":
+          field.okay++;
+          break;
+        case "sad":
+          field.sad++;
+          break;
       }
-      await invite.remove();
-      await survey.save();
+    });
 
-      res.redirect("/");
+    if (req.body.comment != null && req.body.comment != "") {
+      survey.comments.push(req.body.comment);
     }
-  });
+    await invite.remove();
+    await survey.save();
 
+    res.redirect("/");
+  }
+});
+
+// Create Admin Router
 var admin = express.Router();
 
+// Setup Password Promt for the Admin area
 admin.use(
   basicAuth({
     users: { admin: config.Admin_Password },
@@ -98,19 +133,19 @@ admin.use(
   })
 );
 
+// Show Admin Startpage
 admin.get("/", async function (req, res) {
-  res.render("pages/admin/index");
+  var surveys = await Surveys.find({});
+  res.render("pages/admin/surveys", { surveys });
 });
 
-admin.post("/", async function (req, res) {
-  res.send("ok");
-});
-
+// Show Survays
 admin.get("/surveys", async function (req, res) {
   var surveys = await Surveys.find({});
   res.render("pages/admin/surveys", { surveys });
 });
 
+// Create Survay
 admin.post("/survey/create", async function (req, res) {
   var name = req.body.name;
   var description = req.body.description;
@@ -118,26 +153,54 @@ admin.post("/survey/create", async function (req, res) {
   res.redirect(survey._id);
 });
 
+// Show Survey
 admin.get("/survey/:surveyId", async function (req, res) {
   var surveyId = req.params.surveyId;
   var survey = await Surveys.findOne({ _id: surveyId });
   var invitecount = await Invites.find({ surveyId: survey._id }).count();
   res.render("pages/admin/survey", { survey, invitecount });
 });
+
+// Show Invites
 admin.get("/survey/:surveyId/invites", async function (req, res) {
   var surveyId = req.params.surveyId;
   var survey = await Surveys.findOne({ _id: surveyId });
   var invites = await Invites.find({ surveyId: survey._id });
   res.render("pages/admin/invites", { survey, invites });
 });
+
+// Manage Invites
 admin.post("/survey/:surveyId/invites", async function (req, res) {
   var action = req.body.action;
   switch (action) {
     case "delete":
-      var inviteId = req.body.inviteId;
-      var invite = await Invites.findOne({ _id: inviteId });
-      await invite.remove();
+      await Invites.deleteOne({ _id: req.body.inviteId });
       res.redirect(`/admin/survey/${req.params.surveyId}/invites`);
+      break;
+    case "deleteAll":
+      await Invites.deleteMany({ surveyId: req.params.surveyId });
+      res.redirect(`/admin/survey/${req.params.surveyId}/invites`);
+      break;
+  }
+});
+
+// Show Questions
+admin.get("/survey/:surveyId/questions", async function (req, res) {
+  var survey = await Surveys.findOne({ _id: req.params.surveyId });
+  res.render("pages/admin/questions", { survey });
+});
+
+// Manage Questions
+admin.post("/survey/:surveyId/questions", async function (req, res) {
+  var action = req.body.action;
+  switch (action) {
+    // Delete Question
+    case "delete":
+      var questionId = req.body.questionId;
+      res.redirect(`/admin/survey/${req.params.surveyId}/questions`);
+      break;
+    // Create Question
+    case "create":
       break;
   }
 });
@@ -177,34 +240,22 @@ app.use("/admin", admin);
 app.get("/:surveyId/:inviteId/", async function (req, res) {
   var surveyId = req.params.surveyId;
   var inviteId = req.params.inviteId;
-  var survey = await Surveys.findOne({
-    _id: surveyId,
-  });
-  var invite = await Invites.findOne({
-    surveyId: surveyId,
-    _id: req.params.inviteId,
-  });
-  if (invite == null) {
+
+  var valid = await validateInvite(surveyId, inviteId);
+  if (!valid.is) {
     res.render("pages/error", {
-      error: "Keine Einladung gefunden!",
-      description: "Die Einladung ist Abgelaufen oder Nicht mehr Gültig!",
+      error: valid.error,
+      description: valid.description,
     });
   } else {
-    //check if not valid or expired
-    if (!invite.valid) {
-      res.render("pages/error", {
-        error: "Die Einladung ist Ungültig",
-        description: "Scheinbar wurde die Einladung deaktiviert/gesperrt!",
-      });
-    } else if (invite.expiryDate.getTime() < new Date().getTime()) {
-      res.render("pages/error", {
-        error: "Die Einladung ist Abgelaufen",
-        description:
-          "Du hattest 7 Tage zeit an der Umfrage Teilzunehmen... Leider ist es jetzt zuspät!",
-      });
-    } else {
-      res.render("pages/survey", { invite, survey });
-    }
+    var survey = await Surveys.findOne({
+      _id: surveyId,
+    });
+    var invite = await Invites.findOne({
+      surveyId: surveyId,
+      _id: req.params.inviteId,
+    });
+    res.render("pages/survey", { invite, survey });
   }
 });
 

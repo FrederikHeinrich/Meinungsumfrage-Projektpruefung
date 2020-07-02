@@ -39,89 +39,14 @@
         </button>
       </form>
       <br />
-      <h4>Fragen:</h4>
-      <form action="" method="POST" class="my-4 form-inline">
-        <label for="text" class="sr-only">Text</label>
-        <input
-          required
-          placeholder="Text"
-          type="text"
-          name="text"
-          id="text"
-          class="form-control col mr-2 no-print"
-        />
-        <button
-          class="btn btn-success no-print"
-          type="submit"
-          name="action"
-          value="create"
+      <h4>
+        Fragen:
+        <a href="/admin/survey/<%= survey._id  %>/questions"
+          >(<%= survey.fields.length %>)</a
         >
-          Hinzufügen
-        </button>
-      </form>
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>Text</th>
-            <th>Happy</th>
-            <th>Okay</th>
-            <th>Sad</th>
-            <th class="no-print"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <% survey.fields.forEach(field => { %>
-          <tr>
-            <td>
-              <a><%= field.text %></a>
-            </td>
-            <td>
-              <a><%= field.happy %></a>
-            </td>
-            <td>
-              <a><%= field.okay %></a>
-            </td>
-            <td>
-              <a><%= field.sad %></a>
-            </td>
-            <td class="no-print">
-              <form action="" method="POST">
-                <input hidden name="fieldId" value="<%= field._id %>" />
-                <button
-                  type="submit"
-                  name="action"
-                  value="delete"
-                  <%
-                  if
-                  (survey.entries
-                >
-                  0) { %> disabled <% } %>>löschen
-                </button>
-              </form>
-            </td>
-          </tr>
-          <% }) %>
-        </tbody>
-      </table>
+      </h4>
       <br />
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>Anmerkungen</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% survey.comments.forEach(comment => { %>
-          <tr>
-            <td>
-              <a><%= comment %></a>
-            </td>
-          </tr>
-          <% }) %>
-        </tbody>
-      </table>
-
-      <a class="no-print" href="../surveys">Zu den Umfragen</a>
+      <a class="no-print" href="../surveys">Zurück</a>
     </div>
 
     <footer>

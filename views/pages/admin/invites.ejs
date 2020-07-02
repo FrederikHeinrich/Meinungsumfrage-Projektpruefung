@@ -12,6 +12,7 @@
     <div class="container">
       <h1><%= survey.name %></h1>
       <h3><%= survey.description %></h3>
+      <br />
       <h4>Einladungen</h4>
       <form
         action="/admin/survey/<%= survey._id  %> "
@@ -36,14 +37,19 @@
           Einladen
         </button>
       </form>
-      <br />
       <table class="table table-striped">
         <thead>
           <tr>
             <th>E-Mail</th>
             <th>Ablaufdatum</th>
             <th>Gültig</th>
-            <th></th>
+            <th>
+              <form action="" method="POST">
+                <button type="submit" name="action" value="deleteAll">
+                  alle löschen
+                </button>
+              </form>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -56,7 +62,7 @@
               <a><%= invite.expiryDate %></a>
             </td>
             <td>
-                <form action="" method="post"></form>
+              <form action="" method="post"></form>
               <a><%= invite.valid %></a>
             </td>
             <td>
