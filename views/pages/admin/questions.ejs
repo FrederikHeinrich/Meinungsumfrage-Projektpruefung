@@ -36,10 +36,10 @@
       <table class="table table-striped">
         <thead>
           <tr>
-            <th>Text</th>
-            <th>Happy</th>
-            <th>Okay</th>
-            <th>Sad</th>
+            <th>Frage</th>
+            <th>👍</th>
+            <th>👌</th>
+            <th>👎</th>
             <th class="no-print"></th>
           </tr>
         </thead>
@@ -60,16 +60,9 @@
             </td>
             <td class="no-print">
               <form action="" method="POST">
-                <input hidden name="fieldId" value="<%= field._id %>" />
-                <button
-                  type="submit"
-                  name="action"
-                  value="delete"
-                  <%
-                  if
-                  (survey.entries
-                >
-                  0) { %> disabled <% } %>>löschen
+                <input hidden name="questionId" value="<%= field._id %>" />
+                <button type="submit" name="action" value="delete">
+                  löschen
                 </button>
               </form>
             </td>

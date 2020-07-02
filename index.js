@@ -181,6 +181,22 @@ admin.post("/survey/:surveyId/invites", async function (req, res) {
       await Invites.deleteMany({ surveyId: req.params.surveyId });
       res.redirect(`/admin/survey/${req.params.surveyId}/invites`);
       break;
+    case "invite":
+      var surveyId = req.params.surveyId;
+      var email = req.body.email;
+      var survey = await Surveys.findOne({ _id: surveyId });
+
+      var invite = await Invites.create({ surveyId: survey._id, email: email });
+      // send E-mail
+      let info = await emailer.sendMail({
+        from: config.EMail_Sender,
+        to: email,
+        subject: config.EMail_Title,
+        html: `<a href="${config.Web_Domain}/${invite.surveyId}/${invite._id}">Hier Klicken!</a>
+        oder öffne diesen Link: ${config.Web_Domain}/${invite.surveyId}/${invite._id}`,
+      });
+      res.redirect(`/admin/survey/${surveyId}/invites`);
+      break;
   }
 });
 
@@ -197,40 +213,29 @@ admin.post("/survey/:surveyId/questions", async function (req, res) {
     // Delete Question
     case "delete":
       var questionId = req.body.questionId;
+      var surveyId = req.params.surveyId;
+      var survey = await Surveys.findOne({ _id: surveyId });
+      var fields = survey.fields;
+      var i = 0;
+      fields.forEach((field) => {
+        if (field._id == questionId) {
+          fields.splice(i, 1);
+        } else {
+          i++;
+        }
+      });
+      await survey.save();
       res.redirect(`/admin/survey/${req.params.surveyId}/questions`);
       break;
     // Create Question
-    case "create":
-      break;
-  }
-});
 
-admin.post("/survey/:surveyId", async function (req, res) {
-  var action = req.body.action;
-  switch (action) {
     case "create":
       var surveyId = req.params.surveyId;
       var fieldText = req.body.text;
       var survey = await Surveys.findOne({ _id: surveyId });
       survey.fields.push({ text: fieldText });
       await survey.save();
-      res.redirect(`/admin/survey/${surveyId}`);
-      break;
-    case "invite":
-      var surveyId = req.params.surveyId;
-      var email = req.body.email;
-      var survey = await Surveys.findOne({ _id: surveyId });
-
-      var invite = await Invites.create({ surveyId: survey._id, email: email });
-      // send E-mail
-      let info = await emailer.sendMail({
-        from: config.EMail_Sender,
-        to: email,
-        subject: config.EMail_Title,
-        html: `<a href="${config.Web_Domain}/${invite.surveyId}/${invite._id}">Hier Klicken!</a>
-        oder öffne diesen Link: ${config.Web_Domain}/${invite.surveyId}/${invite._id}`,
-      });
-      res.redirect(`/admin/survey/${surveyId}/invites`);
+      res.redirect(`/admin/survey/${surveyId}/questions`);
       break;
   }
 });
