@@ -89,7 +89,7 @@ app.post("/", async function (req, res) {
   var survey = await Surveys.findOne({ _id: req.body.surveyId }); // Get filled Survay
   var invite = await Invites.findOne({ _id: req.body.inviteId }); // Get used Invite
 
-  var valid = await validateInvite(surveyId, inviteId); //Test if Invite is Valid
+  var valid = await validateInvite(survey._id, invite._id); //Test if Invite is Valid
   if (!valid.is) {
     res.render("pages/error", {
       error: valid.error,
