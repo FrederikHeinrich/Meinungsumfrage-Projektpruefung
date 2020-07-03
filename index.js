@@ -1,52 +1,55 @@
 //----------------------------------------------
-var createError = require("http-errors");
-var express = require("express");
-var path = require("path");
-var morgan = require("morgan");
-var basicAuth = require("express-basic-auth");
+const colors = require("colors");
+(express = require("express")),
+  (morgan = require("morgan")),
+  (basicAuth = require("express-basic-auth")),
+  (nodemailer = require("nodemailer")),
+  (mongoose = require("mongoose")),
+  (config = require("./config")),
+  (app = express()),
+  (emailer = nodemailer.createTransport(config.email));
 
-const nodemailer = require("nodemailer");
-
-var mongoose = require("mongoose");
-
-var config = require("./config");
+//----------------------------------------------
+console.clear();
+console.log(
+  colors.rainbow(`
+    ███████ ██    ██ ██████  ██    ██ ███████ ██    ██ 
+    ██      ██    ██ ██   ██ ██    ██ ██       ██  ██  
+    ███████ ██    ██ ██████  ██    ██ █████     ████   
+         ██ ██    ██ ██   ██  ██  ██  ██         ██    
+    ███████  ██████  ██   ██   ████   ███████    ██
+                                                   `)
+);
 //----------------------------------------------
 
-var app = express();
 app.use(morgan("dev"));
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: false }));
 
 var Invites = require("./models/Invite");
 var Surveys = require("./models/Survey");
+const Survey = require("./models/Survey");
 
 //----------------------------------------------
 
-mongoose.connect("mongodb://localhost/Surveys", {
+mongoose.connect(config.database.mongoDb, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
 var db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
 db.once("open", async function () {
-  console.log("Database Connected!");
+  console.log(
+    colors.green(
+      `Database connected to: ${colors.underline(config.database.mongoDb)}`
+    )
+  );
 });
 
 //----------------------------------------------
 
-var emailer = nodemailer.createTransport({
-  host: config.EMail_Host,
-  port: config.EMail_Port,
-  secure: config.EMail_Secure,
-  auth: {
-    user: config.EMail_User,
-    pass: config.EMail_Password,
-  },
-});
-
-//----------------------------------------------
-
-async function validateInvite(surveyId, inviteId, error, description) {
+async function validateInvite(surveyId, inviteId) {
+  console.log(colors.yellow(`Verify an invitation!`));
   //check if not valid or expired
   try {
     var invite = await Invites.findOne({
@@ -54,27 +57,34 @@ async function validateInvite(surveyId, inviteId, error, description) {
       surveyId: surveyId,
     }); // Get used Invite
   } catch (er) {
+    console.log(colors.red(`Verification Incorrect! ${er}`));
     return { is: false, error: er, description: "Ein Fehler ist aufgetreten!" };
   }
-  if (invite == null)
+  if (invite == null) {
+    console.log(colors.red(`Verification Incorrect! Invitation not Found!`));
     return {
       is: false,
       error: "Einladung nicht gefunden",
       description: "Ein Fehler ist aufgetreten!",
     };
-  if (!invite.valid)
+  }
+  if (!invite.valid) {
+    console.log(colors.red(`Verification Incorrect! Invitation is not valid!`));
     return {
       is: false,
       error: "Einladung wurde deaktiviert!",
       description: "Ein Fehler ist aufgetreten!",
     };
-  if (invite.expiryDate.getTime() < new Date().getTime())
+  }
+  if (invite.expiryDate.getTime() < new Date().getTime()) {
+    console.log(colors.red(`Verification Incorrect! Invitation has expired!`));
     return {
       is: false,
       error: "Einladung ist abgelaufen!",
       description: "Ein Fehler ist aufgetreten!",
     };
-
+  }
+  console.log(colors.green(`Verification completed!`));
   return { is: true };
 }
 
@@ -88,6 +98,8 @@ app.get("/", async function (req, res) {
 app.post("/", async function (req, res) {
   var survey = await Surveys.findOne({ _id: req.body.surveyId }); // Get filled Survay
   var invite = await Invites.findOne({ _id: req.body.inviteId }); // Get used Invite
+
+  console.log(colors.green(`Receive a completed survey!`));
 
   var valid = await validateInvite(survey._id, invite._id); //Test if Invite is Valid
   if (!valid.is) {
@@ -128,7 +140,7 @@ var admin = express.Router();
 // Setup Password Promt for the Admin area
 admin.use(
   basicAuth({
-    users: { admin: config.Admin_Password },
+    users: { admin: config.admin.password },
     challenge: true,
   })
 );
@@ -136,12 +148,14 @@ admin.use(
 // Show Admin Startpage
 admin.get("/", async function (req, res) {
   var surveys = await Surveys.find({});
+  console.log(colors.green(`Render: ${"pages/admin/index"}`));
   res.render("pages/admin/index");
 });
 
 // Show Survays
 admin.get("/surveys", async function (req, res) {
   var surveys = await Surveys.find({});
+  console.log(colors.green(`Render: ${"pages/admin/surveys"}`));
   res.render("pages/admin/surveys", { surveys });
 });
 
@@ -150,14 +164,23 @@ admin.post("/survey/create", async function (req, res) {
   var name = req.body.name;
   var description = req.body.description;
   var survey = await Surveys.create({ name: name, description: description });
-  res.redirect(survey._id);
+  console.log(
+    colors.green(`Create a Survey:
+    Name: ${survey.name}
+    Description: ${survey.description}
+    `)
+  );
+  res.redirect(`pages/admin/survey/${survey._id}`);
 });
 
 // Show Survey
 admin.get("/survey/:surveyId", async function (req, res) {
   var surveyId = req.params.surveyId;
   var survey = await Surveys.findOne({ _id: surveyId });
-  var invitecount = await Invites.find({ surveyId: survey._id }).count();
+
+  if (survey == null) return res.redirect("/admin/surveys");
+
+  var invitecount = await Invites.countDocuments({ surveyId: survey._id });
   res.render("pages/admin/survey", { survey, invitecount });
 });
 
@@ -165,6 +188,9 @@ admin.get("/survey/:surveyId", async function (req, res) {
 admin.get("/survey/:surveyId/invites", async function (req, res) {
   var surveyId = req.params.surveyId;
   var survey = await Surveys.findOne({ _id: surveyId });
+
+  if (survey == null) return res.redirect("/admin/surveys");
+
   var invites = await Invites.find({ surveyId: survey._id });
   res.render("pages/admin/invites", { survey, invites });
 });
@@ -175,18 +201,40 @@ admin.post("/survey/:surveyId/invites", async function (req, res) {
   switch (action) {
     case "delete":
       await Invites.deleteOne({ _id: req.body.inviteId });
+      console.log(
+        colors.green(
+          `Delete Invite: ${colors.underline(
+            req.body.inviteId
+          )} for Survey: ${colors.underline(req.params.surveyId)}`
+        )
+      );
       res.redirect(`/admin/survey/${req.params.surveyId}/invites`);
       break;
     case "deleteAll":
       await Invites.deleteMany({ surveyId: req.params.surveyId });
+      console.log(
+        colors.green(
+          `Delete ${colors.bold(`all`)} Invites for Survey: ${colors.underline(
+            req.params.surveyId
+          )}`
+        )
+      );
       res.redirect(`/admin/survey/${req.params.surveyId}/invites`);
       break;
     case "invite":
       var surveyId = req.params.surveyId;
       var email = req.body.email;
       var survey = await Surveys.findOne({ _id: surveyId });
-
-      var invite = await Invites.create({ surveyId: survey._id, email: email });
+      survey.invitedEmails.push(email);
+      await survey.save();
+      var invite = await Invites.create({ surveyId: survey._id });
+      console.log(
+        colors.green(
+          `Create Invite: ${colors.underline(
+            invite._id
+          )} for Survey: ${colors.underline(req.params.surveyId)}`
+        )
+      );
       // send E-mail
       let info = await emailer.sendMail({
         from: config.EMail_Sender,
@@ -195,6 +243,13 @@ admin.post("/survey/:surveyId/invites", async function (req, res) {
         html: `<a href="${config.Web_Domain}/${invite.surveyId}/${invite._id}">Hier Klicken!</a>
         oder öffne diesen Link: ${config.Web_Domain}/${invite.surveyId}/${invite._id}`,
       });
+      console.log(
+        colors.green(
+          `Send Invite Mail to: ${colors.underline(
+            email
+          )} for Survey: ${colors.underline(req.params.surveyId)}`
+        )
+      );
       res.redirect(`/admin/survey/${surveyId}/invites`);
       break;
   }
@@ -203,6 +258,7 @@ admin.post("/survey/:surveyId/invites", async function (req, res) {
 // Show Questions
 admin.get("/survey/:surveyId/questions", async function (req, res) {
   var survey = await Surveys.findOne({ _id: req.params.surveyId });
+  if (survey == null) return res.redirect("/admin/surveys");
   res.render("pages/admin/questions", { survey });
 });
 
@@ -210,9 +266,47 @@ admin.get("/survey/:surveyId/questions", async function (req, res) {
 admin.post("/survey/:surveyId/questions", async function (req, res) {
   var action = req.body.action;
   switch (action) {
+    // Create Question
+    case "create":
+      var surveyId = req.params.surveyId;
+      var fieldText = req.body.text;
+      var survey = await Surveys.findOne({ _id: surveyId });
+      survey.fields.push({ text: fieldText });
+      await survey.save();
+      res.redirect(`/admin/survey/${surveyId}/questions`);
+      break;
+  }
+});
+
+admin.get("/survey/:surveyId/question/:questionId", async function (req, res) {
+  var surveyId = req.params.surveyId;
+  var questionId = req.params.questionId;
+  var survey = await Surveys.findOne({ _id: surveyId });
+
+  if (survey == null) return res.redirect("/admin/surveys");
+
+  var questions = survey.fields;
+  var targetquestion;
+  questions.forEach((question) => {
+    if (question._id.toString() == questionId.toString()) {
+      targetquestion = question;
+    }
+  });
+
+  if (targetquestion == null)
+    return res.redirect(`/admin/survey/${survey._id}/questions`);
+  return res.render("pages/admin/question", {
+    question: targetquestion,
+    survey,
+  });
+});
+
+admin.post("/survey/:surveyId/question/:questionId", async function (req, res) {
+  var action = req.body.action;
+  switch (action) {
     // Delete Question
     case "delete":
-      var questionId = req.body.questionId;
+      var questionId = req.params.questionId;
       var surveyId = req.params.surveyId;
       var survey = await Surveys.findOne({ _id: surveyId });
       var fields = survey.fields;
@@ -227,15 +321,19 @@ admin.post("/survey/:surveyId/questions", async function (req, res) {
       await survey.save();
       res.redirect(`/admin/survey/${req.params.surveyId}/questions`);
       break;
-    // Create Question
-
-    case "create":
+    case "save":
+      var questionId = req.params.questionId;
       var surveyId = req.params.surveyId;
-      var fieldText = req.body.text;
       var survey = await Surveys.findOne({ _id: surveyId });
-      survey.fields.push({ text: fieldText });
+      var fields = survey.fields;
+      fields.forEach((field) => {
+        if (field._id == questionId) {
+          field.text = req.body.text;
+          field.orderId = req.body.orderId;
+        }
+      });
       await survey.save();
-      res.redirect(`/admin/survey/${surveyId}/questions`);
+      res.redirect(`/admin/survey/${req.params.surveyId}/questions`);
       break;
   }
 });
@@ -264,6 +362,10 @@ app.get("/:surveyId/:inviteId/", async function (req, res) {
   }
 });
 
-app.listen(config.Web_Port, async function () {
-  console.log("Server ist Online!");
+app.listen(config.web.port, async function () {
+  console.log(
+    colors.green(
+      `Server is listenning to port: ${colors.underline(config.web.port)}`
+    )
+  );
 });

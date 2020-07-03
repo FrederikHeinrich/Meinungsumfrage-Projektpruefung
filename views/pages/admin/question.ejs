@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%- include("../../partials/head.ejs") %>
+    <title>Umfrage - <%= survey.name %></title>
+  </head>
+
+  <body>
+    <header>
+      <%- include("../../partials/header.ejs") %>
+    </header>
+    <div class="container">
+      <h1><%= question.text %></h1>
+      <br />
+      <form method="POST">
+        <input value="<%= question._id %>" type="text" hidden />
+        <input value="<%= question.orderId %>" type="number" name="orderId" />
+        <input value="<%= question.text %>" type="text" name="text" />
+        <button type="submit" value="save" name="action">Speichern</button>
+        <button type="submit" value="delete" name="action">Löschen</button>
+      </form>
+      <br />
+      <a href="/admin/survey/<%= survey._id %>/questions">Zurück</a>
+    </div>
+
+    <footer>
+      <%- include("../../partials/footer.ejs") %>
+    </footer>
+  </body>
+</html>

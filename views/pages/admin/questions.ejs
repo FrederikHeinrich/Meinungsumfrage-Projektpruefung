@@ -61,9 +61,11 @@
             <td class="no-print">
               <form action="" method="POST">
                 <input hidden name="questionId" value="<%= field._id %>" />
-                <button type="submit" name="action" value="delete">
-                  löschen
-                </button>
+                <a
+                  href="/admin/survey/<%= survey._id %>/question/<%= field._id%>"
+                >
+                  📝
+                </a>
               </form>
             </td>
           </tr>

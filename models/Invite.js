@@ -6,10 +6,6 @@ const InviteSchema = new mongoose.Schema({
     ref: "survey",
     required: true,
   },
-  email: {
-    type: String,
-    required: true,
-  },
   expiryDate: {
     type: Date,
     required: true,

@@ -5,7 +5,7 @@ var SurveyFields = new mongoose.Schema({
     type: String,
     required: true,
   },
-  oderId: {
+  orderId: {
     type: Number,
     required: true,
     default: 0,
@@ -40,6 +40,9 @@ const SurveySchema = new mongoose.Schema({
     type: [SurveyFields],
   },
   comments: {
+    type: [String],
+  },
+  invitedEmails: {
     type: [String],
   },
   entries: {

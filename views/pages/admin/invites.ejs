@@ -36,9 +36,8 @@
       <table class="table table-striped">
         <thead>
           <tr>
-            <th>E-Mail</th>
+            <th>ID</th>
             <th>Ablaufdatum</th>
-            <th>Gültig</th>
             <th>
               <form action="" method="POST">
                 <button type="submit" name="action" value="deleteAll">
@@ -52,22 +51,29 @@
           <% invites.forEach(invite => { %>
           <tr>
             <td>
-              <a><%= invite.email %></a>
+              <a><%= invite._id %></a>
             </td>
             <td>
               <a><%= invite.expiryDate %></a>
             </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <h4>
+        Eingeladenene E-Mail Adressen: (<%= survey.invitedEmails.length %>)
+      </h4>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% survey.invitedEmails.forEach(email => { %>
+          <tr>
             <td>
-              <form action="" method="post"></form>
-              <a><%= invite.valid %></a>
-            </td>
-            <td>
-              <form action="" method="POST">
-                <input hidden name="inviteId" value="<%= invite._id %>" />
-                <button type="submit" name="action" value="delete">
-                  löschen
-                </button>
-              </form>
+              <a><%= email %></a>
             </td>
           </tr>
           <% }) %>
